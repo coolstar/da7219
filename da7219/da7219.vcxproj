@@ -133,6 +133,7 @@
     <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="hidcommon.h" />
     <ClInclude Include="registers-aad.h" />
     <ClInclude Include="registers.h" />
     <ClInclude Include="spb.h" />

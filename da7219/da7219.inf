@@ -46,8 +46,16 @@ da7219.sys  = 1,,
 [Da7219_Device.NT]
 CopyFiles=Drivers_Dir
 
+[Da7219_Device.NT.HW]
+AddReg=Da7219_AddReg
+
 [Drivers_Dir]
 da7219.sys
+
+[Da7219_AddReg]
+; Set to 1 to connect the first interrupt resource found, 0 to leave disconnected
+HKR,Settings,"ConnectInterrupt",0x00010001,0
+HKR,,"UpperFilters",0x00010000,"mshidkmdf"
 
 ;-------------- Service installation
 [Da7219_Device.NT.Services]
