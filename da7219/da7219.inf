@@ -1,0 +1,70 @@
+;/*++
+;
+;Copyright (c) CoolStar.  All rights reserved.
+;
+;Module Name:
+;    coolstar.inf
+;
+;Abstract:
+;    INF file for installing the TS3A227E Jack Detect Driver 
+;
+;
+;--*/
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Media
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider    = CoolStar
+DriverVer   = 2/25/2022,1.0.0
+CatalogFile = da7219.cat
+PnpLockdown=1
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; ================= Class section =====================
+
+[SourceDisksNames]
+1 = %DiskId1%,,,""
+
+[SourceDisksFiles]
+da7219.sys  = 1,,
+
+;*****************************************
+; da7219  Install Section
+;*****************************************
+
+[Manufacturer]
+%StdMfg%=Standard,NTAMD64
+
+; Decorated model section take precedence over undecorated 
+; ones on XP and later.
+[Standard.NTAMD64]
+%da7219.DeviceDesc%=Da7219_Device, ACPI\DLGS7219
+
+[Da7219_Device.NT]
+CopyFiles=Drivers_Dir
+
+[Drivers_Dir]
+da7219.sys
+
+;-------------- Service installation
+[Da7219_Device.NT.Services]
+AddService = da7219,%SPSVCINST_ASSOCSERVICE%, Da7219_Service_Inst
+
+; -------------- da7219 driver install sections
+[Da7219_Service_Inst]
+DisplayName    = %da7219.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START 
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\da7219.sys
+LoadOrderGroup = Base
+
+[Strings]
+SPSVCINST_ASSOCSERVICE= 0x00000002
+StdMfg                 = "CoolStar"
+DiskId1                = "DA7219 Installation Disk #1"
+da7219.DeviceDesc = "Dialog Semiconductor 7219 Codec"
+da7219.SVCDESC    = "DA7219 Service"
