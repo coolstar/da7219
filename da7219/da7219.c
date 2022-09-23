@@ -364,21 +364,6 @@ DA7219BootWorkItem(
 		da7219_reg_write(pDevice, DA7219_ACCDET_CONFIG_2, 0x04);
 	}
 
-	LARGE_INTEGER Interval;
-	Interval.QuadPart = -10 * 1000 * 100;
-	KeDelayExecutionThread(KernelMode, false, &Interval);
-
-	DbgPrint("DA7219 dump:\n");
-	for (int i = 0; i <= 0xff;) {
-		DbgPrint("%02x: ", i);
-		for (int j = 0; j <= 0xf; j++, i++) {
-			unsigned int reg;
-			da7219_reg_read(pDevice, i, &reg);
-			DbgPrint("%02x ", reg);
-		}
-		DbgPrint("\n");
-	}
-
 	pDevice->DevicePoweredOn = TRUE;
 
 end:
@@ -460,6 +445,74 @@ Status
 	pDevice->DevicePoweredOn = FALSE;
 
 	return STATUS_SUCCESS;
+}
+
+BOOLEAN OnInterruptIsr(
+	WDFINTERRUPT Interrupt,
+	ULONG MessageID) {
+	UNREFERENCED_PARAMETER(MessageID);
+
+	WDFDEVICE Device = WdfInterruptGetDevice(Interrupt);
+	PDA7219_CONTEXT pDevice = GetDeviceContext(Device);
+
+	if (!pDevice->DevicePoweredOn)
+		return true;
+
+	NTSTATUS status = STATUS_SUCCESS;
+
+	unsigned int reg_a;
+	unsigned int reg_b;
+
+	da7219_reg_read(pDevice, DA7219_ACCDET_IRQ_EVENT_A, &reg_a);
+	da7219_reg_read(pDevice, DA7219_ACCDET_IRQ_EVENT_B, &reg_b);
+
+	unsigned int status_a;
+	da7219_reg_read(pDevice, DA7219_ACCDET_STATUS_A, &status_a);
+
+	//Clear events
+	da7219_reg_write(pDevice, DA7219_ACCDET_IRQ_EVENT_A, reg_a);
+	da7219_reg_write(pDevice, DA7219_ACCDET_IRQ_EVENT_B, reg_b);
+
+	if (status_a & DA7219_JACK_INSERTION_STS_MASK) {
+		if (reg_a & DA7219_E_JACK_INSERTED_MASK) {
+			//DbgPrint("Jack inserted\n");
+		}
+		if (reg_a & DA7219_E_JACK_DETECT_COMPLETE_MASK) {
+			CsAudioSpecialKeyReport report;
+			report.ReportID = REPORTID_SPECKEYS;
+			report.ControlCode = CONTROL_CODE_JACK_TYPE;
+			report.ControlValue = SND_JACK_HEADSET;
+
+			size_t bytesWritten;
+			Da7219ProcessVendorReport(pDevice, &report, sizeof(report), &bytesWritten);
+		}
+
+		if (status_a & DA7219_JACK_TYPE_STS_MASK) {
+			for (int i = 0; i < DA7219_AAD_MAX_BUTTONS; ++i) {
+				/* Button Release */
+				if (reg_b &
+					(DA7219_E_BUTTON_A_RELEASED_MASK >> i)) {
+					Da7219MediaReport report;
+					report.ReportID = REPORTID_MEDIA;
+					report.ControlCode = i + 1;
+
+					size_t bytesWritten;
+					Da7219ProcessVendorReport(pDevice, &report, sizeof(report), &bytesWritten);
+				}
+			}
+		}
+	}
+	else if (reg_a & DA7219_E_JACK_REMOVED_MASK) {
+		CsAudioSpecialKeyReport report;
+		report.ReportID = REPORTID_SPECKEYS;
+		report.ControlCode = CONTROL_CODE_JACK_TYPE;
+		report.ControlValue = 0;
+
+		size_t bytesWritten;
+		Da7219ProcessVendorReport(pDevice, &report, sizeof(report), &bytesWritten);
+	}
+
+	return true;
 }
 
 NTSTATUS
@@ -558,6 +611,30 @@ Da7219EvtDeviceAdd(
 	{
 		Da7219Print(DEBUG_LEVEL_ERROR, DBG_PNP,
 			"WdfIoQueueCreate failed 0x%x\n", status);
+
+		return status;
+	}
+
+	//
+	// Create an interrupt object for hardware notifications
+	//
+	WDF_INTERRUPT_CONFIG_INIT(
+		&interruptConfig,
+		OnInterruptIsr,
+		NULL);
+	interruptConfig.PassiveHandling = TRUE;
+
+	status = WdfInterruptCreate(
+		device,
+		&interruptConfig,
+		WDF_NO_OBJECT_ATTRIBUTES,
+		&devContext->Interrupt);
+
+	if (!NT_SUCCESS(status))
+	{
+		Da7219Print(DEBUG_LEVEL_ERROR, DBG_PNP,
+			"Error creating WDF interrupt object - %!STATUS!",
+			status);
 
 		return status;
 	}

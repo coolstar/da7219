@@ -25,7 +25,7 @@ typedef struct _DA7219_MEDIA_REPORT
 
 	BYTE	  ControlCode;
 
-} Rt5682MediaReport;
+} Da7219MediaReport;
 #pragma pack()
 
 #define CONTROL_CODE_JACK_TYPE 0x1
