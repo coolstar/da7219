@@ -317,8 +317,6 @@ DA7219BootWorkItem(
 	}
 
 	{
-		//set sane defaults from Linux driver
-
 		//Set sample rate
 		da7219_reg_write(pDevice, DA7219_SR, DA7219_SR_48000);
 		//Set PLL
@@ -329,7 +327,7 @@ DA7219BootWorkItem(
 
 		da7219_reg_write(pDevice, DA7219_DIG_ROUTING_DAI, 0);
 		da7219_reg_write(pDevice, DA7219_DAI_CTRL, DA7219_DAI_FORMAT_I2S | (2 << DA7219_DAI_CH_NUM_SHIFT) | DA7219_DAI_EN_MASK);
-		da7219_reg_write(pDevice, DA7219_DAI_TDM_CTRL, 0);
+		da7219_reg_write(pDevice, DA7219_DAI_TDM_CTRL, DA7219_DAI_OE_MASK);
 
 		da7219_reg_write(pDevice, DA7219_MIXIN_L_SELECT, DA7219_MIXIN_L_MIX_SELECT_MASK);
 		da7219_reg_write(pDevice, DA7219_MIXIN_L_GAIN, 0xA);
@@ -344,9 +342,9 @@ DA7219BootWorkItem(
 		da7219_reg_write(pDevice, DA7219_MIXOUT_R_SELECT, DA7219_MIXOUT_R_MIX_SELECT_MASK);
 
 		da7219_reg_write(pDevice, DA7219_MICBIAS_CTRL, 0x0D);
-		da7219_reg_write(pDevice, DA7219_MIC_1_CTRL, 0);
-		da7219_reg_write(pDevice, DA7219_MIXIN_L_CTRL, DA7219_MIXIN_L_AMP_RAMP_EN_MASK);
-		da7219_reg_write(pDevice, DA7219_ADC_L_CTRL, DA7219_ADC_L_RAMP_EN_MASK);
+		da7219_reg_write(pDevice, DA7219_MIC_1_CTRL, DA7219_MIC_1_AMP_EN_MASK);
+		da7219_reg_write(pDevice, DA7219_MIXIN_L_CTRL, DA7219_MIXIN_L_AMP_EN_MASK | DA7219_MIXIN_L_AMP_RAMP_EN_MASK | DA7219_MIXIN_L_MIX_EN_MASK);
+		da7219_reg_write(pDevice, DA7219_ADC_L_CTRL, DA7219_ADC_L_EN_MASK | DA7219_ADC_L_RAMP_EN_MASK);
 
 		da7219_reg_write(pDevice, DA7219_DAC_L_CTRL, 8 | DA7219_DAC_L_RAMP_EN_MASK | DA7219_DAC_L_EN_MASK);
 		da7219_reg_write(pDevice, DA7219_DAC_R_CTRL, DA7219_DAC_R_RAMP_EN_MASK | DA7219_DAC_R_EN_MASK);
