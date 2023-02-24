@@ -44,4 +44,15 @@ typedef struct _CSAUDIO_SPECKEY_REPORT
 
 #pragma pack()
 
+#pragma pack(1)
+typedef struct _CSAUDIO_SPECKEYREQ_REPORT
+{
+
+	BYTE      ReportID;
+
+	BYTE	  AnyCode;
+
+} CsAudioSpecialKeyRequestReport;
+#pragma pack()
+
 #endif

@@ -395,6 +395,8 @@ Status
 	PDA7219_CONTEXT pDevice = GetDeviceContext(FxDevice);
 	NTSTATUS status = STATUS_SUCCESS;
 
+	pDevice->JackType = 0;
+
 	WDF_OBJECT_ATTRIBUTES attributes;
 	WDF_WORKITEM_CONFIG workitemConfig;
 	WDFWORKITEM hWorkItem;
@@ -476,10 +478,12 @@ BOOLEAN OnInterruptIsr(
 			//DbgPrint("Jack inserted\n");
 		}
 		if (reg_a & DA7219_E_JACK_DETECT_COMPLETE_MASK) {
+			pDevice->JackType = SND_JACK_HEADSET;
+
 			CsAudioSpecialKeyReport report;
 			report.ReportID = REPORTID_SPECKEYS;
 			report.ControlCode = CONTROL_CODE_JACK_TYPE;
-			report.ControlValue = SND_JACK_HEADSET;
+			report.ControlValue = pDevice->JackType;
 
 			size_t bytesWritten;
 			Da7219ProcessVendorReport(pDevice, &report, sizeof(report), &bytesWritten);
@@ -501,10 +505,12 @@ BOOLEAN OnInterruptIsr(
 		}
 	}
 	else if (reg_a & DA7219_E_JACK_REMOVED_MASK) {
+		pDevice->JackType = 0;
+
 		CsAudioSpecialKeyReport report;
 		report.ReportID = REPORTID_SPECKEYS;
 		report.ControlCode = CONTROL_CODE_JACK_TYPE;
-		report.ControlValue = 0;
+		report.ControlValue = pDevice->JackType;
 
 		size_t bytesWritten;
 		Da7219ProcessVendorReport(pDevice, &report, sizeof(report), &bytesWritten);
@@ -1118,6 +1124,17 @@ Da7219WriteReport(
 
 			switch (transferPacket->reportId)
 			{
+			case REPORTID_SPECKEYS:
+				status = STATUS_SUCCESS;
+
+				CsAudioSpecialKeyReport report;
+				report.ReportID = REPORTID_SPECKEYS;
+				report.ControlCode = CONTROL_CODE_JACK_TYPE;
+				report.ControlValue = DevContext->JackType;
+
+				size_t bytesWritten;
+				Da7219ProcessVendorReport(DevContext, &report, sizeof(report), &bytesWritten);
+				break;
 			default:
 
 				Da7219Print(DEBUG_LEVEL_ERROR, DBG_IOCTL,
