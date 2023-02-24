@@ -335,8 +335,8 @@ DA7219BootWorkItem(
 		da7219_reg_write(pDevice, DA7219_MIC_1_GAIN, 0x5);
 
 		da7219_reg_write(pDevice, DA7219_CP_CTRL, 0xE0);
-		da7219_reg_write(pDevice, DA7219_HP_L_GAIN, 0x3F);
-		da7219_reg_write(pDevice, DA7219_HP_R_GAIN, 0x3F);
+		da7219_reg_write(pDevice, DA7219_HP_L_GAIN, 0x32);
+		da7219_reg_write(pDevice, DA7219_HP_R_GAIN, 0x32);
 
 		da7219_reg_write(pDevice, DA7219_MIXOUT_L_SELECT, DA7219_MIXOUT_L_MIX_SELECT_MASK);
 		da7219_reg_write(pDevice, DA7219_MIXOUT_R_SELECT, DA7219_MIXOUT_R_MIX_SELECT_MASK);
