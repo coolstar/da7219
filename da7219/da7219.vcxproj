@@ -136,6 +136,7 @@
     <ClInclude Include="hidcommon.h" />
     <ClInclude Include="registers-aad.h" />
     <ClInclude Include="registers.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="spb.h" />
     <ClInclude Include="stdint.h" />
     <ClInclude Include="trace.h" />
@@ -144,6 +145,9 @@
   <ItemGroup>
     <ClCompile Include="spb.c" />
     <ClCompile Include="da7219.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="da7219.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
