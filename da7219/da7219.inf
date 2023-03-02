@@ -3,10 +3,10 @@
 ;Copyright (c) CoolStar.  All rights reserved.
 ;
 ;Module Name:
-;    coolstar.inf
+;    da7219.inf
 ;
 ;Abstract:
-;    INF file for installing the TS3A227E Jack Detect Driver 
+;    INF file for installing the Dialog Semiconductor 7219 Driver 
 ;
 ;
 ;--*/
