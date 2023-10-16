@@ -22,6 +22,13 @@
 
 #include "spb.h"
 
+typedef enum platform {
+	PlatformNone,
+	PlatformIntel,
+	PlatformStoney,
+	PlatformRyzen
+} Platform;
+
 enum snd_jack_types {
 	SND_JACK_HEADPHONE = 0x0001,
 	SND_JACK_MICROPHONE = 0x0002,

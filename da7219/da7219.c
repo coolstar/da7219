@@ -89,6 +89,44 @@ NTSTATUS da7219_reg_update(
 	return status;
 }
 
+static Platform GetPlatform() {
+	int cpuinfo[4];
+	__cpuidex(cpuinfo, 0, 0);
+
+	int temp = cpuinfo[2];
+	cpuinfo[2] = cpuinfo[3];
+	cpuinfo[3] = temp;
+
+	char vendorName[13];
+	RtlZeroMemory(vendorName, 13);
+	memcpy(vendorName, &cpuinfo[1], 12);
+
+	__cpuidex(cpuinfo, 1, 0);
+
+	UINT16 family = (cpuinfo[0] >> 8) & 0xF;
+	UINT8 model = (cpuinfo[0] >> 4) & 0xF;
+	UINT8 stepping = cpuinfo[0] & 0xF;
+	if (family == 0xF || family == 0x6) {
+		model += (((cpuinfo[0] >> 16) & 0xF) << 4);
+	}
+	if (family == 0xF) {
+		family += (cpuinfo[0] >> 20) & 0xFF;
+	}
+
+	if (strcmp(vendorName, "AuthenticAMD") == 0) {
+		if (family == 21) {
+			return PlatformStoney;
+		}
+		else {
+			return PlatformRyzen; //family 23 for Picasso / Dali
+		}
+	}
+	else if (strcmp(vendorName, "GenuineIntel") == 0) {
+		return PlatformIntel; //all Intel (AVS and SOF) use same settings
+	}
+	return PlatformNone;
+}
+
 NTSTATUS
 OnPrepareHardware(
 	_In_  WDFDEVICE     FxDevice,
@@ -225,6 +263,8 @@ DA7219BootWorkItem(
 	WDFDEVICE Device = (WDFDEVICE)WdfWorkItemGetParentObject(WorkItem);
 	PDA7219_CONTEXT pDevice = GetDeviceContext(Device);
 
+	Platform platform = GetPlatform();
+
 	unsigned int system_active, system_status;
 	int i;
 	da7219_reg_read(pDevice, DA7219_SYSTEM_ACTIVE, &system_active);
@@ -257,7 +297,10 @@ DA7219BootWorkItem(
 	da7219_reg_update(pDevice, DA7219_SYSTEM_ACTIVE,
 		DA7219_SYSTEM_ACTIVE_MASK, 1);
 
-	da7219_reg_write(pDevice, DA7219_IO_CTRL, DA7219_IO_VOLTAGE_LEVEL_2_5V_3_6V);
+	//stoney uses DA7219_IO_VOLTAGE_LEVEL_1_2V_2_8V
+	da7219_reg_write(pDevice, DA7219_IO_CTRL, platform != PlatformStoney ? DA7219_IO_VOLTAGE_LEVEL_2_5V_3_6V : DA7219_IO_VOLTAGE_LEVEL_1_2V_2_8V);
+
+	da7219_reg_update(pDevice, DA7219_REFERENCES, DA7219_BIAS_EN_MASK, DA7219_BIAS_EN_MASK);
 
 	unsigned int rev;
 	da7219_reg_read(pDevice, DA7219_CHIP_REVISION, &rev);
@@ -319,11 +362,23 @@ DA7219BootWorkItem(
 	{
 		//Set sample rate
 		da7219_reg_write(pDevice, DA7219_SR, DA7219_SR_48000);
+		
 		//Set PLL
 		da7219_reg_write(pDevice, DA7219_PLL_CTRL, DA7219_PLL_MODE_SRM | DA7219_PLL_INDIV_9_TO_18_MHZ | DA7219_PLL_INDIV_4_5_TO_9_MHZ);
-		da7219_reg_write(pDevice, DA7219_PLL_FRAC_TOP, 0x1E & DA7219_PLL_FBDIV_FRAC_TOP_MASK);
-		da7219_reg_write(pDevice, DA7219_PLL_FRAC_BOT, 0xB8 & DA7219_PLL_FBDIV_FRAC_BOT_MASK);
-		da7219_reg_write(pDevice, DA7219_PLL_INTEGER, 0x28 & DA7219_PLL_FBDIV_INTEGER_MASK);
+		da7219_reg_write(pDevice, DA7219_DAI_CLK_MODE, DA7219_DAI_BCLKS_PER_WCLK_64);
+		
+		if (platform != PlatformStoney) {
+			da7219_reg_write(pDevice, DA7219_PLL_FRAC_TOP, 0x1E & DA7219_PLL_FBDIV_FRAC_TOP_MASK);
+			da7219_reg_write(pDevice, DA7219_PLL_FRAC_BOT, 0xB8 & DA7219_PLL_FBDIV_FRAC_BOT_MASK);
+			da7219_reg_write(pDevice, DA7219_PLL_INTEGER, 0x28 & DA7219_PLL_FBDIV_INTEGER_MASK);
+		}
+		else {
+			da7219_reg_write(pDevice, DA7219_PLL_CTRL, DA7219_PLL_MODE_NORMAL | DA7219_PLL_INDIV_36_TO_54_MHZ);
+			da7219_reg_write(pDevice, DA7219_PLL_FRAC_TOP, 0x18 & DA7219_PLL_FBDIV_FRAC_TOP_MASK);
+			da7219_reg_write(pDevice, DA7219_PLL_FRAC_BOT, 0x93 & DA7219_PLL_FBDIV_FRAC_BOT_MASK);
+			da7219_reg_write(pDevice, DA7219_PLL_INTEGER, 0x20 & DA7219_PLL_FBDIV_INTEGER_MASK);
+			da7219_reg_write(pDevice, DA7219_DAI_CLK_MODE, DA7219_DAI_CLK_EN_MASK | DA7219_DAI_BCLKS_PER_WCLK_64);
+		}
 
 		da7219_reg_write(pDevice, DA7219_DIG_ROUTING_DAI, 0);
 		da7219_reg_write(pDevice, DA7219_DAI_CTRL, DA7219_DAI_FORMAT_I2S | (2 << DA7219_DAI_CH_NUM_SHIFT) | DA7219_DAI_EN_MASK);
@@ -441,6 +496,11 @@ Status
 
 	PDA7219_CONTEXT pDevice = GetDeviceContext(FxDevice);
 	NTSTATUS status = STATUS_SUCCESS;
+
+	da7219_reg_write(pDevice, DA7219_PLL_CTRL, DA7219_PLL_MODE_SRM | DA7219_PLL_INDIV_9_TO_18_MHZ | DA7219_PLL_INDIV_4_5_TO_9_MHZ);
+	da7219_reg_write(pDevice, DA7219_DAI_CLK_MODE, DA7219_DAI_BCLKS_PER_WCLK_64);
+
+	da7219_reg_update(pDevice, DA7219_REFERENCES, DA7219_BIAS_EN_MASK, 0);
 
 	pDevice->DevicePoweredOn = FALSE;
 
