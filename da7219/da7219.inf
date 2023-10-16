@@ -47,7 +47,9 @@ da7219.sys  = 1,,
 CopyFiles=Drivers_Dir
 
 [Da7219_Device.NT.HW]
-AddReg=Da7219_AddReg
+AddReg=Da7219_AddReg, Da7219_AddReg.Configuration.AddReg
+Include=pci.inf
+Needs=PciD3ColdSupported.HW
 
 [Drivers_Dir]
 da7219.sys
@@ -56,6 +58,9 @@ da7219.sys
 ; Set to 1 to connect the first interrupt resource found, 0 to leave disconnected
 HKR,Settings,"ConnectInterrupt",0x00010001,0
 HKR,,"UpperFilters",0x00010000,"mshidkmdf"
+
+[Da7219_AddReg.Configuration.AddReg]
+HKR,,"EnhancedPowerManagementEnabled",0x00010001,1
 
 ;-------------- Service installation
 [Da7219_Device.NT.Services]
